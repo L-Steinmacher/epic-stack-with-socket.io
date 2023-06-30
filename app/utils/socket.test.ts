@@ -3,13 +3,9 @@ import { Server } from 'socket.io'
 import { createServer } from 'http'
 import client, { type Socket }  from 'socket.io-client'
 
-
-
-
 let ioServer: Server
 let server: ReturnType<typeof createServer>
 let socket: Socket
-
 
 beforeEach(async () => {
   server = createServer()
@@ -54,4 +50,3 @@ test('should get a pong', async () => {
     })
   })
 })
-
