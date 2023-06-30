@@ -31,7 +31,7 @@ import { combineHeaders, getDomainUrl, getUserImgSrc } from './utils/misc.ts'
 import { useNonce } from './utils/nonce-provider.ts'
 import { makeTimings, time } from './utils/timing.server.ts'
 import { useOptionalUser, useUser } from './utils/user.ts'
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from './components/ui/button.tsx'
 import {
 	DropdownMenu,
@@ -45,6 +45,8 @@ import { Confetti } from './components/confetti.tsx'
 import { getFlashSession } from './utils/flash-session.server.ts'
 import { useToast } from './utils/useToast.tsx'
 import { Toaster } from './components/ui/toaster.tsx'
+import { io, type Socket } from 'socket.io-client'
+import { SocketProvider } from './utils/context.tsx'
 
 export const links: LinksFunction = () => {
 	return [
@@ -133,6 +135,23 @@ export const headers: HeadersFunction = ({ loaderHeaders }) => {
 }
 
 function App() {
+    const [socket, setSocket] = useState<Socket | undefined>();
+
+    useEffect(() => {
+        const newSocket = io();
+        setSocket(newSocket);
+        return () => {
+            newSocket.close();
+        }
+    }, [])
+
+    useEffect(() => {
+        if (!socket) return;
+        socket.on("confirmation" , (data) => {
+            console.log(data);
+        })
+    },[socket])
+
 	const data = useLoaderData<typeof loader>()
 	const nonce = useNonce()
 	const user = useOptionalUser()
@@ -167,9 +186,11 @@ function App() {
 					</nav>
 				</header>
 
-				<div className="flex-1">
-					<Outlet />
-				</div>
+                <SocketProvider socket={socket} >
+                    <div className="flex-1">
+                        <Outlet />
+                    </div>
+                </SocketProvider>
 
 				<div className="container mx-auto flex justify-between">
 					<Link to="/">

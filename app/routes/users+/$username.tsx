@@ -4,10 +4,12 @@ import {
 	type V2_MetaFunction,
 } from '@remix-run/node'
 import { Form, Link, useLoaderData } from '@remix-run/react'
+import { useEffect } from 'react'
 import invariant from 'tiny-invariant'
 import { GeneralErrorBoundary } from '~/components/error-boundary.tsx'
 import { Spacer } from '~/components/spacer.tsx'
 import { Button } from '~/components/ui/button.tsx'
+import { useSocket } from '~/utils/context.tsx'
 import { prisma } from '~/utils/db.server.ts'
 import { getUserImgSrc } from '~/utils/misc.ts'
 import { useOptionalUser } from '~/utils/user.ts'
@@ -36,6 +38,18 @@ export default function UsernameIndex() {
 	const userDisplayName = user.name ?? user.username
 	const loggedInUser = useOptionalUser()
 	const isLoggedInUser = data.user.id === loggedInUser?.id
+	const socket = useSocket()
+
+	useEffect(() => {
+		if (!socket) return
+		socket.on("event", (data: any) => {
+			console.log(data)
+		})
+	}, [socket])
+	const handlePing = (event: { preventDefault: () => void }) => {
+		event.preventDefault()
+		socket?.emit("event", "ping")
+	}
 
 	return (
 		<div className="container mx-auto mb-48 mt-36 flex flex-col items-center justify-center">
@@ -91,6 +105,7 @@ export default function UsernameIndex() {
 								</Link>
 							</Button>
 						)}
+						<button onClick={handlePing}>Ping</button>
 					</div>
 				</div>
 			</div>

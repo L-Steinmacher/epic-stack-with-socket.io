@@ -8,6 +8,7 @@ import address from 'address'
 import closeWithGrace from 'close-with-grace'
 import helmet from 'helmet'
 import crypto from 'crypto'
+import { Server } from 'socket.io'
 import {
 	type RequestHandler,
 	createRequestHandler as _createRequestHandler,
@@ -16,10 +17,12 @@ import { wrapExpressCreateRequestHandler } from '@sentry/remix'
 import { type ServerBuild, broadcastDevReady } from '@remix-run/node'
 import getPort, { portNumbers } from 'get-port'
 import chalk from 'chalk'
+import { createServer } from 'http'
 
 // @ts-ignore - this file may not exist if you haven't built yet, but it will
 // definitely exist by the time the dev or prod server actually runs.
 import * as remixBuild from '../build/index.js'
+
 const MODE = process.env.NODE_ENV
 
 const createRequestHandler = wrapExpressCreateRequestHandler(
@@ -32,6 +35,19 @@ const build = remixBuild as unknown as ServerBuild
 let devBuild = build
 
 const app = express()
+
+const httpServer = createServer(app);
+
+const io = new Server(httpServer)
+
+io.on("connection", (socket) => {
+	console.log(socket.id, "connected");
+	socket.emit("confirmation", "connected!");
+	socket.on("event", (data) => {
+		console.log(socket.id, data);
+		socket.emit("event", "pong");
+	});
+});
 
 const getHost = (req: { get: (key: string) => string | undefined }) =>
 	req.get('X-Forwarded-Host') ?? req.get('host') ?? ''
@@ -127,7 +143,7 @@ function getRequestHandler(build: ServerBuild): RequestHandler {
 
 app.all(
 	'*',
-	process.env.NODE_ENV === 'development'
+	MODE === 'development'
 		? (...args) => getRequestHandler(devBuild)(...args)
 		: getRequestHandler(build),
 )
@@ -137,8 +153,8 @@ const portToUse = await getPort({
 	port: portNumbers(desiredPort, desiredPort + 100),
 })
 
-const server = app.listen(portToUse, () => {
-	const addy = server.address()
+httpServer.listen(portToUse, () => {
+	const addy = httpServer.address()
 	const portUsed =
 		desiredPort === portToUse
 			? desiredPort
@@ -179,12 +195,12 @@ ${chalk.bold('Press Ctrl+C to stop')}
 
 closeWithGrace(async () => {
 	await new Promise((resolve, reject) => {
-		server.close(e => (e ? reject(e) : resolve('ok')))
+		httpServer.close(e => (e ? reject(e) : resolve('ok')))
 	})
 })
 
 // during dev, we'll keep the build module up to date with the changes
-if (process.env.NODE_ENV === 'development') {
+if (MODE === 'development') {
 	async function reloadBuild() {
 		devBuild = await import(`${BUILD_PATH}?update=${Date.now()}`)
 		broadcastDevReady(devBuild)
