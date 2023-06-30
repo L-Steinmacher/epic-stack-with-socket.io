@@ -105,7 +105,12 @@ export default function UsernameIndex() {
 								</Link>
 							</Button>
 						)}
-						<button onClick={handlePing}>Ping</button>
+						<Button
+							variant={isLoggedInUser ? 'default' : 'outline'}
+							size={'default'}
+							onClick={handlePing}>
+							Ping
+						</Button>
 					</div>
 				</div>
 			</div>
