@@ -1,52 +1,49 @@
-import { test } from 'vitest'
-import { Server } from 'socket.io'
-import { createServer } from 'http'
-import client, { type Socket }  from 'socket.io-client'
+import { Server, type Socket as ServerSocket } from "socket.io";
+import { createServer } from "http";
+import Client, { type Socket as ClientSocket } from "socket.io-client";
+import { afterAll, beforeAll, describe, expect, test } from 'vitest'
+import { resolve } from "path";
 
-let ioServer: Server
-let server: ReturnType<typeof createServer>
-let socket: Socket
+describe.concurrent("testing socket.io server and client", () => {
+  let io: Server
+  let serverSocket: ServerSocket
+  let clientSocket: ClientSocket
 
-beforeEach(async () => {
-  server = createServer()
-  ioServer = new Server(server)
-
-  await new Promise<void>((resolve) => {
-    server.listen(() => {
-      const address = server.address();
-      if (address && typeof address === 'object') {
-        const port = address.port;
-        socket = client(`http://localhost:${port}`);
-        socket.on('connect', () => resolve());
-      } else {
-        throw new Error("Unable to retrieve server address.");
-      }
+  beforeAll(async () => {
+    const httpServer = createServer();
+    io = new Server(httpServer);
+    await new Promise<void>((resolve) => {
+      httpServer.listen(() => {
+        const port = (httpServer.address() as any).port;
+        clientSocket = Client(`http://localhost:${port}`);
+        io.on("connection", (socket: ServerSocket) => {
+          serverSocket = socket;
+        });
+        clientSocket.on("connect", () => resolve());
+      });
     });
   });
-})
 
-afterEach(() => {
-  ioServer.close()
-  server.close()
-})
+  afterAll(() => {
+    io.close();
+    clientSocket.close();
+  });
 
-test('should work', async () => {
-  socket.emit('event', 'Hello World')
-  // client side logic here
-  await new Promise<void>((resolve) => {
-    socket.once('event', (message: any) => {
-      expect(message).tobo('Hello World')
-      resolve()
-    })
-  })
-})
+  test("should work", async () => {
+    clientSocket.on("hello", (arg) => {
+      expect(arg).toBe("world");
+      resolve();
+    });
+    serverSocket.emit("hello", "world");
+  });
 
-test('should get a pong', async () => {
-  socket.emit('event', 'ping')
-  await new Promise<void>((resolve) => {
-    socket.once('event', (message: any) => {
-      expect(message).tobo('pong')
-      resolve()
-    })
-  })
-})
+  test("should work (with ack)", async () => {
+    serverSocket.on("hi", (cb) => {
+      cb("hola");
+    });
+    clientSocket.emit("hi", (arg: string) => {
+      expect(arg).toBe("hola");
+      resolve();
+    });
+  });
+});
