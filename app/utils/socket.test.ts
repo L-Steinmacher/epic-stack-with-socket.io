@@ -4,6 +4,7 @@ import Client, { type Socket as ClientSocket } from "socket.io-client";
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { resolve } from "path";
 
+// These tests are taken from https://socket.io/docs/v4/testing/#example-with-jest and refactored to use vitest
 describe.concurrent("testing socket.io server and client", () => {
   let io: Server
   let serverSocket: ServerSocket

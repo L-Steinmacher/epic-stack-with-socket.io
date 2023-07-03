@@ -36,19 +36,6 @@ let devBuild = build
 
 const app = express()
 
-const httpServer = createServer(app);
-
-const io = new Server(httpServer)
-
-io.on("connection", (socket) => {
-	console.log(socket.id, "connected");
-	socket.emit("confirmation", "connected!");
-	socket.on("event", (data) => {
-		console.log(socket.id, data);
-		socket.emit("event", "pong");
-	});
-});
-
 const getHost = (req: { get: (key: string) => string | undefined }) =>
 	req.get('X-Forwarded-Host') ?? req.get('host') ?? ''
 
@@ -153,8 +140,23 @@ const portToUse = await getPort({
 	port: portNumbers(desiredPort, desiredPort + 100),
 })
 
-httpServer.listen(portToUse, () => {
-	const addy = httpServer.address()
+const server = createServer(app)
+
+// Create new instance of socket.io
+const io = new Server(server)
+
+// This establishes a basic communication channel between the server and the connected clients using Socket.IO.
+server.listen(portToUse, () => {
+io.on("connection", (socket) => {
+	console.log(socket.id, "connected");
+	socket.emit("confirmation", "connected!");
+	socket.on("event", (data) => {
+		console.log(socket.id, data);
+		socket.emit("event", "pong");
+	});
+});
+
+	const addy = server.address()
 	const portUsed =
 		desiredPort === portToUse
 			? desiredPort
@@ -195,7 +197,7 @@ ${chalk.bold('Press Ctrl+C to stop')}
 
 closeWithGrace(async () => {
 	await new Promise((resolve, reject) => {
-		httpServer.close(e => (e ? reject(e) : resolve('ok')))
+		server.close(e => (e ? reject(e) : resolve('ok')))
 	})
 })
 

@@ -135,6 +135,7 @@ export const headers: HeadersFunction = ({ loaderHeaders }) => {
 }
 
 function App() {
+	/* <-- Adding state to handle socket connection --> */
     const [socket, setSocket] = useState<Socket | undefined>();
 
     useEffect(() => {
@@ -151,6 +152,7 @@ function App() {
             console.log(data);
         })
     },[socket])
+	/* <-- End of adding state to handle socket connection --> */
 
 	const data = useLoaderData<typeof loader>()
 	const nonce = useNonce()
@@ -185,7 +187,7 @@ function App() {
 						</div>
 					</nav>
 				</header>
-
+				{/* Wrapped Outlet with app/utils/context.ts SocketProvider */}
                 <SocketProvider socket={socket} >
                     <div className="flex-1">
                         <Outlet />
